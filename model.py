@@ -18,8 +18,6 @@ nltk.download('omw-1.4')
 class SentimentRecommendationModel:
 
     def __init__(self):
-
-        try:
             self.model = pickle.load(open(ROOT_PATH + MODEL,'rb'))  
             self.vectorizer = pickle.load(open(ROOT_PATH +  VECTORIZER,'rb'))
             self.recommender = pickle.load(open(ROOT_PATH +  RECOMMENDER,'rb'))
@@ -27,14 +25,10 @@ class SentimentRecommendationModel:
             self.data = pd.read_csv('Dataset/dataset.csv')
             self.lemmatizer = WordNetLemmatizer()
             self.stopWords = set(stopwords.words('english'))
-
-        except IOError:
-            print("Error: can\'t find file or read data")
-
-  
+ 
     """create text processing function  """
     
-    def textProcessing(text):
+    def textProcessing(self,text):
         '''
             This function parses a text and do the following.
             - Make the text lowercase
@@ -54,13 +48,13 @@ class SentimentRecommendationModel:
     """function to remove stop words from the text"""
     
     
-    def removeStopwords(text,self):
+    def removeStopwords(self,text):
         words = [word for word in text.split() if word.isalpha() and word not in self.stopWords]
         return " ".join(words)
         
     """helper function to map NTLK position tags"""
     
-    def get_wordnet_pos(tag):
+    def get_wordnet_pos(self,tag):
         if tag.startswith('J'):
             return wordnet.ADJ
         elif tag.startswith('V'):
@@ -85,7 +79,7 @@ class SentimentRecommendationModel:
 
     """function to extract the POS tags"""
 
-    def pos_Tag(text):
+    def pos_Tag(self,text):
     #TextBlob provides a simple API for diving into common natural language processing (NLP) tasks such as part-of-speech tagging, noun phrase extraction, sentiment analysis, classification, translation, and more
         blob = TextBlob(text)
         return " ".join([word for (word,tag) in blob.tags if tag in ['JJ','JJR','JJS','NN']])
@@ -118,17 +112,17 @@ class SentimentRecommendationModel:
     def getTop5PRoductsToRecommend(self,user):
         if (user in self.recommender.index):
             recommendations = self.getRecommendationByUser(user)
-            filtered_data =  self.cleanDataset(self.cleanDataset.id.isin(recommendations.id))
+            filtered_data =  self.cleanDataset[self.cleanDataset.id.isin(list(recommendations.id))]
             X= self.vectorizer.transform(filtered_data.finalReviews.values.astype(str))
             filtered_data['predicted_sentiment'] = self.model.predict(X)
             df = pd.merge(recommendations, filtered_data, on="id").drop_duplicates()
-            temp = df.drop(columns=['id','reviews_username','reviewsText','finalReviews','similarity_score'])
-            df_grouped  = temp.groupby('name', as_index=False).count()
-            df_grouped['similarity_score'] = df_grouped.name.apply(lambda x: df[(df.name==x) & (df['predicted_sentiment']==1)]["similarity_score"].median())
-            df_grouped["pos_review_count"] = df_grouped.name.apply(lambda x: df[(df.name==x) & (df['predicted_sentiment']==1)]["predicted_sentiment"].count())
-            df_grouped["total_review_count"] = df_grouped['predicted_sentiment']
-            df_grouped['pos_sentiment_percent'] = np.round(df_grouped["pos_review_count"]/df_grouped["total_review_count"]*100,2)
-            return df_grouped.sort_values(['pos_sentiment_percent','name'], ascending=[False,True])[0:5]
+            temp = df.drop(columns=['name','reviews_username','reviewsText','finalReviews','similarity_score','reviews_rating','user_sentiment'])
+            df_grouped  = temp.groupby('id', as_index=False).count()
+            df_grouped['similarity_score'] = df_grouped.id.apply(lambda x: df[(df.id==x) & (df['predicted_sentiment']==1)]["similarity_score"].median())
+            df_grouped["pos_review_count"] = df_grouped.id.apply(lambda x: df[(df.id==x) & (df['predicted_sentiment']==1)]["predicted_sentiment"].count())
+            df_grouped['pos_sentiment_percent'] = np.round(df_grouped["pos_review_count"]/df_grouped["predicted_sentiment"]*100,2)
+            df = pd.merge(self.data,df_grouped,on='id')[['name','brand','manufacturer','pos_sentiment_percent']].drop_duplicates()
+            return df.sort_values(['pos_sentiment_percent','name'], ascending=[False,True])[0:5]
         else:
             print(f"User name {user} doesn't exist")
             return None
