@@ -46,7 +46,6 @@ htmlcov/
 nosetests.xml
 coverage.xml
 *.cover
-*.py,cover
 .hypothesis/
 .pytest_cache/
 cover/
@@ -148,6 +147,7 @@ dmypy.json
 
 # pytype static type analyzer
 .pytype/
+
 
 # Cython debug symbols
 cython_debug/
