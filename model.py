@@ -31,7 +31,7 @@ class SentimentRecommendationModel:
         except IOError:
             print("Error: can\'t find file or read data")
 
-
+  
     """create text processing function  """
     
     def textProcessing(text):
@@ -90,11 +90,18 @@ class SentimentRecommendationModel:
         blob = TextBlob(text)
         return " ".join([word for (word,tag) in blob.tags if tag in ['JJ','JJR','JJS','NN']])
 
+    """create text preprocessing function"""
     
+    def preProcess(self,text):
+        text = self.textProcessing(text)
+        text = self.textLemmatize(text)
+        return self.pos_Tag(text)
+
+
     """function to classify the sentiment using the trained ML model"""
 
     def classify_sentiment(self, review_text):
-        review_text = self.preprocess_text(review_text)
+        review_text = self.preProcess(review_text)
         X = self.vectorizer.transform([review_text])
         y_pred = self.model.predict(X)
         return y_pred
@@ -109,7 +116,7 @@ class SentimentRecommendationModel:
     """function to filter the product recommendations using the sentiment model and get the top 5 recommendations"""
 
     def getTop5PRoductsToRecommend(self,user):
-        if (user in self.user_final_rating.index):
+        if (user in self.recommender.index):
             recommendations = self.getRecommendationByUser(user)
             filtered_data =  self.cleanDataset(self.cleanDataset.id.isin(recommendations.id))
             X= self.vectorizer.transform(filtered_data.finalReviews.values.astype(str))
@@ -126,8 +133,5 @@ class SentimentRecommendationModel:
             print(f"User name {user} doesn't exist")
             return None
 
-    
-if __name__== '__main__':
-    print("arpit")
-    classObj = SentimentRecommendationModel()
+
 
